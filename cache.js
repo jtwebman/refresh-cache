@@ -14,14 +14,23 @@ function handleError(cache, err) {
   if (cache.options.errorCallback) {
     cache.options.errorCallback(err);
   }
+
   return cache;
+}
+
+function callLoader(cache) {
+  try {
+    return BPromise.resolve(cache.options.loader());
+  } catch(ex) {
+    return BPromise.reject(ex);
+  }
 }
 
 function load(cache) {
   if (!cache.loadPromise || !cache.loadPromise.isPending()) {
     var startTime = process.hrtime();
 
-    cache.loadPromise = BPromise.resolve(cache.options.loader())
+    cache.loadPromise = callLoader(cache)
     .timeout(cache.options.timeout)
     .then(function(loadData) {
       cache.lastLoadRunTime = process.hrtime(startTime)[1]/1000000;
@@ -87,26 +96,11 @@ function Cache(options) {
 
   cache.get = function() {
     var args = [].slice.call(arguments);
-
-    var cb; //set to last arg if function
-    if (args.length >= 1 && typeof args[args.length - 1] === 'function') {
-      cb = args.pop();
-    }
-
-    return getData(cache, args).then(function(data) {
-      if (cb) cb(null, data);
-      return data;
-    }).catch(function(err) {
-      if (cb) cb(err);
-    });
+    return getData(cache, args);
   };
 
   cache.reload = function(cb) {
-    return load(cache).then(function() {
-      if (cb) cb();
-    }).catch(function(err) {
-      if (cb) cb(err);
-    });
+    return load(cache);
   };
 
   return cache;

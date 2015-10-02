@@ -33,24 +33,6 @@ describe('Cache Tests', function() {
     });
   });
 
-  it('loads and gets when calling get even before load with callback',  function(done) {
-    var cache = new Cache({
-      loader: loadTests,
-      getter: function(tests, id) {
-        return _.find(tests, function(test) {
-          return test.id === id;
-        });
-      }
-    });
-
-    // call get with key that the getter function uses
-    return cache.get(2, function(err, testValue) {
-      expect(testValue.id).to.equal(2);
-      expect(testValue.name).to.equal('test 2');
-      done();
-    });
-  });
-
   it('calling load then get pulls from cache without calling load again',  function() {
     var callCount = 0; // usedto count function calls
 
@@ -131,17 +113,22 @@ describe('Cache Tests', function() {
     });
   });
 
-  it('a loader that always fails errors on new', function() {
-    var error;
-    try {
-      new Cache({ loader: function() { throw new Error('I have an issue.') } });
-    } catch(ex) {
-      error = ex;
-    }
-    expect(error).is.error('I have an issue.');
+  it('a loader that always errors sets lastLoadError and calls errorCallback', function() {
+    var testerror;
+    var cache = new Cache({
+      loader: function() { throw new Error('I have an issue.'); },
+      errorCallback: function(err) {
+        testerror = err;
+      }
+    });
+
+    return cache.get().then(function(data) {
+      expect(cache.lastLoadError).is.error('I have an issue.');
+      expect(testerror).is.error('I have an issue.');
+    });
   });
 
-  it('a loader that fails on refresh load sets lastLoadError keeps reading old data', function() {
+  it('a loader that fails in promise on refresh load sets lastLoadError keeps reading old data', function() {
     var callCount = 0; // usedto count function calls
 
     function errorAfterFirstLoadLoader() {
@@ -152,6 +139,31 @@ describe('Cache Tests', function() {
         return BPromise.delay(5).then(function() {
           throw new Error('We have issues.');
         });
+      }
+    }
+
+    var cache = new Cache({
+      loader: errorAfterFirstLoadLoader,
+      ttl: 10
+    });
+
+    return BPromise.delay(50).then(function() {
+      return cache.get();
+    }).then(function(data) {
+      expect(data).to.be.an.array();
+      expect(cache.lastLoadError).to.be.an.error('We have issues.');
+    });
+  });
+
+  it('a loader that fails on refresh load sets lastLoadError keeps reading old data', function() {
+    var callCount = 0; // usedto count function calls
+
+    function errorAfterFirstLoadLoader() {
+      callCount++;
+      if (callCount == 1) {
+        return loadTests();
+      } else {
+        throw new Error('We have issues.');
       }
     }
 

@@ -24,11 +24,6 @@ myCache.get().then(function(myData) {
   console.log(myData); //write out the data
 });
 
-// If you prefer just make the last argument you pass get a callback function
-myCache.get(function(err, myData) {
-  console.log(myData); //write out the data
-});
-
 // You can force a reload anytime by calling reload
 
 // This will not wait for the data to reload but return after starting it
@@ -39,21 +34,60 @@ myCache.reload().then(function() {
   // data is fully reloaded
 });
 
-// You can also pass a callback function if you prefer callbacks
-myCache.reload(function(err) {
-  if (err) {
-    // do error case
-  }
-  // data is fully reloaded
-})
-
 ```
 
 If you want more complex get logic then getting all the data from load you can
-pass a getter function on the options and get a single record for an array
+pass a getter function on the options and get a single record for an array.
 
+```Javascript
+var Cache = require('refresh-cache');
+var _ = require('lodash');
 
+var myCache = new Cache({
+  loader: function() {
+    return {
+      { id: 1, name: 'test 1' },
+      { id: 2, name: 'test 2' },
+      { id: 3, name: 'test 3' },
+    };
+  },
+  ttl: 1800000, // 30 minutes in ms
 
-I do use promises as
-call reload and get are asynchronous calls but if you pass a function as the
-last argument I will call it with a standard callback error, data.
+  // getter gets the data as the first argument and then whatever you pass to get
+  getter: function(tests, id) {
+    return _.find(tests, function(test) {
+      return test.id === id;
+    });
+  }
+});P
+
+// now you can call get passing in an id
+myCache.get(2).then(function(test) {
+  console.log(test); //write out { id: 2, name: 'test 2' }
+});
+
+```
+
+For the most part the cache swallows errors so it is up to you to handle then.
+The lastLoadError is a property on the cache but you can also pass an
+errorCallback in on the options and it will be called for all errors. We use
+the callback as the data refreshes in the background so you can log it however
+you do it in your system.
+
+```Javascript
+var Cache = require('refresh-cache');
+
+var myCache = new Cache({
+  loader: function() {
+    //... load my data but sometimes I fail
+    return data;
+  },
+  errorCallback: function(err) {
+    //Log my error
+  }
+});
+```
+Also as a side note if you are not using a loader that returns a promise the
+exception might not always be caught. I would suggest wrapping you loader in
+a try catch to handle issues there or using Bluebird library
+Promise.promisify function.
