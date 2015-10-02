@@ -1,0 +1,35 @@
+{
+  "name": "refresh-cache",
+  "version": "1.0.0",
+  "description": "A simple Javascript cache that refreshes by calling the load function at a set refresh time.",
+  "main": "cache.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha",
+    "cover": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jtwebman/refresh-cache.git"
+  },
+  "keywords": [
+    "cache",
+    "cached",
+    "caching",
+    "memoize"
+  ],
+  "author": "JT Turner <jtwebman@gmail.com> (http://jtwebman.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jtwebman/refresh-cache/issues"
+  },
+  "homepage": "https://github.com/jtwebman/refresh-cache",
+  "devDependencies": {
+    "istanbul": "^0.3.21",
+    "mocha": "^2.3.3",
+    "must": "^0.13.1"
+  },
+  "dependencies": {
+    "bluebird": "^2.10.2",
+    "lodash": "^3.10.1"
+  }
+}
