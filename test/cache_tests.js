@@ -33,6 +33,24 @@ describe('Cache Tests', function() {
     });
   });
 
+  it('loads and gets when calling get even before load with callback',  function(done) {
+    var cache = new Cache({
+      loader: loadTests,
+      getter: function(tests, id) {
+        return _.find(tests, function(test) {
+          return test.id === id;
+        });
+      }
+    });
+
+    // call get with key that the getter function uses
+    return cache.get(2, function(err, testValue) {
+      expect(testValue.id).to.equal(2);
+      expect(testValue.name).to.equal('test 2');
+      done();
+    });
+  });
+
   it('calling load then get pulls from cache without calling load again',  function() {
     var callCount = 0; // usedto count function calls
 
@@ -82,33 +100,71 @@ describe('Cache Tests', function() {
     });
   });
 
-  it('calls timeout function if time taken is more then 1.5 ttl time',  function() {
-    var loaderCallCount = 0;
+  it('if load takes to long the error callback is called but data stays',  function() {
+    var firstRun = true;
     var callCount = 0;
 
-    function delaySecondLoad() {
-      loaderCallCount++;
+    function timeoutAfterFirstRunLoad() {
       var data = loadTests();
 
-      if (loaderCallCount == 2) { // delay call 15 ms to force a 1.5 greater then ttl
-        return BPromise.delay(15).then(function() {
+      if (!firstRun) { // delay call 500 ms
+        return BPromise.delay(50).then(function() {
           return data;
         });
-      } else { // return fast on fevery try besides try 2
-      return data;
+      } else { // first run return data
+        firstRun = false;
+        return data;
       }
     }
 
     var cache = new Cache({
-      loader: delaySecondLoad,
-      ttl: 10,
-      timeoutCallback: function() {
+      loader: timeoutAfterFirstRunLoad,
+      ttl: 10, // 10 ms refresh
+      timeout: 10, // timeout after 10 ms
+      errorCallback: function() {
         callCount++;
       }
     });
 
     return BPromise.delay(50).then(function() {
       expect(callCount).to.be.gt(0);
+    });
+  });
+
+  it('a loader that always fails errors on new', function() {
+    var error;
+    try {
+      new Cache({ loader: function() { throw new Error('I have an issue.') } });
+    } catch(ex) {
+      error = ex;
+    }
+    expect(error).is.error('I have an issue.');
+  });
+
+  it('a loader that fails on refresh load sets lastLoadError keeps reading old data', function() {
+    var callCount = 0; // usedto count function calls
+
+    function errorAfterFirstLoadLoader() {
+      callCount++;
+      if (callCount == 1) {
+        return loadTests();
+      } else {
+        return BPromise.delay(5).then(function() {
+          throw new Error('We have issues.');
+        });
+      }
+    }
+
+    var cache = new Cache({
+      loader: errorAfterFirstLoadLoader,
+      ttl: 10
+    });
+
+    return BPromise.delay(50).then(function() {
+      return cache.get();
+    }).then(function(data) {
+      expect(data).to.be.an.array();
+      expect(cache.lastLoadError).to.be.an.error('We have issues.');
     });
   });
 
@@ -140,6 +196,26 @@ describe('Cache Tests', function() {
       error = ex;
     }
     expect(error).is.error('The ttl option must be a number and greater than or equal to 0.');
+  });
+
+  it('passing a non number for timeout throws expection',  function() {
+    var error;
+    try {
+      new Cache({ loader: loadTests, timeout: 'bad' });
+    } catch(ex) {
+      error = ex;
+    }
+    expect(error).is.error('The timeout option must be a number and greater than or equal to 0.');
+  });
+
+  it('passing a negitive number for timeout throws expection',  function() {
+    var error;
+    try {
+      new Cache({ loader: loadTests, timeout: -1 });
+    } catch(ex) {
+      error = ex;
+    }
+    expect(error).is.error('The timeout option must be a number and greater than or equal to 0.');
   });
 
   it('passing a non function for getter throws expection',  function() {
