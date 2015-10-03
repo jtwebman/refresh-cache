@@ -1,6 +1,6 @@
 {
   "name": "refresh-cache",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A simple Javascript cache that refreshes by calling the load function at a set refresh time.",
   "main": "cache.js",
   "scripts": {
