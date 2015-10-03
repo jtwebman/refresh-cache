@@ -1,5 +1,7 @@
 # An Auto Refreshing Cache
 
+[![Build Status](https://travis-ci.org/jtwebman/refresh-cache.svg?branch=master)](https://travis-ci.org/jtwebman/refresh-cache)
+
 Do you have a databases query that you want to cache the results for a few
 minutes? Do you have data in your system that only needs to be reloaded a few
 times a day? Then this is the caching library for you.
