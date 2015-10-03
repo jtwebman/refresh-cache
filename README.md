@@ -1,6 +1,6 @@
 # An Auto Refreshing Cache
 
-[![Build Status](https://travis-ci.org/jtwebman/refresh-cache.svg?branch=master)](https://travis-ci.org/jtwebman/refresh-cache)
+[![Build Status](https://travis-ci.org/jtwebman/refresh-cache.svg?branch=master)](https://travis-ci.org/jtwebman/refresh-cache) [![Coverage Status](https://coveralls.io/repos/jtwebman/refresh-cache/badge.svg?branch=master&service=github)](https://coveralls.io/github/jtwebman/refresh-cache?branch=master)
 
 Do you have a databases query that you want to cache the results for a few
 minutes? Do you have data in your system that only needs to be reloaded a few
