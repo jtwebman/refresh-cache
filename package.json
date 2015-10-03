@@ -4,7 +4,8 @@
   "description": "A simple Javascript cache that refreshes by calling the load function at a set refresh time.",
   "main": "cache.js",
   "scripts": {
-    "test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- -R spec"
+    "test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- -R spec",
+    "travis-ci-test": "./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
   },
   "repository": {
     "type": "git",
@@ -23,8 +24,10 @@
   },
   "homepage": "https://github.com/jtwebman/refresh-cache",
   "devDependencies": {
+    "coveralls": "^2.11.4",
     "istanbul": "^0.3.21",
     "mocha": "^2.3.3",
+    "mocha-lcov-reporter": "^1.0.0",
     "must": "^0.13.1"
   },
   "dependencies": {
