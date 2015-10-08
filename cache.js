@@ -6,9 +6,6 @@ var DEFAULT_TTL = 300000;
 // 30 seconds in ms is the default load timeout
 var DEFAULT_TIMEOUT = 30000;
 
-var BPromise = require('bluebird');
-var _ = require('lodash');
-
 function handleError(cache, err) {
   cache.lastLoadError = err;
   if (cache.options.errorCallback) {
@@ -18,53 +15,74 @@ function handleError(cache, err) {
   return cache;
 }
 
-function callLoader(cache) {
-  try {
-    return BPromise.resolve(cache.options.loader());
-  } catch(ex) {
-    return BPromise.reject(ex);
-  }
-}
+function load(cache, cb) {
+  if (!cache.loading) {
+    cache.loading = true;
 
-function load(cache) {
-  if (!cache.loadPromise || !cache.loadPromise.isPending()) {
-    var startTime = process.hrtime();
+    var timeoutProtect = setTimeout(function() {
+      timeoutProtect = null;
+      cache.loading = false;
+      handleError(cache, new Error('Cache loading timeout hit at ' + cache.options.timeout + 'ms.'));
+    }, cache.options.timeout);
 
-    cache.loadPromise = callLoader(cache)
-    .timeout(cache.options.timeout)
-    .then(function(loadData) {
-      cache.lastLoadRunTime = process.hrtime(startTime)[1]/1000000;
-      cache.data = loadData;
-      return cache;
-    }).catch(function(err) {
-      cache = handleError(cache, err);
-      return cache;
-    });
+    try {
+      cache.options.loader(function(err, loadData) {
+        if (timeoutProtect) {
+          clearTimeout(timeoutProtect);
+          cache.loading = false;
+          if (err) {
+            handleError(cache, err);
+            if (cb) cb(err);
+          } else {
+            cache.data = loadData;
+            if (cb) cb(null, loadData);
+          }
+        }
+      });
+    } catch (err) {
+      clearTimeout(timeoutProtect);
+      cache.loading = false;
+      handleError(cache, err);
+      if (cb) cb(err);
+    }
   }
-  return cache.loadPromise;
 }
 
 function getData(cache, args) {
-  if (!cache.data) {
-    return cache.loadPromise.then(function(loadedCache) {
-      return callGetter(loadedCache, args);
-    });
+  var cb = null;
+  try {
+    cb = args.pop();
+
+    if (typeof cb !== 'function') {
+      throw new Error('Last parameter needs to be a callback function.');
+    }
+
+    var waitLock = setInterval(function() {
+      if (!cache.loading) {
+        clearInterval(waitLock);
+
+        if (!cache.data && cache.lastLoadError) {
+          cb(cache.lastLoadError);
+        } else {
+          if (cache.options.getter) {
+            args.unshift(cache.data);
+            args.push(cb);
+            return cache.options.getter.apply(null, args);
+          } else {
+            return cb(null, cache.data);
+          }
+        }
+      }
+    }, 0);
+
+  } catch(err) {
+    if (cb) {
+      cb(err);
+    } else {
+       throw(err);
+    }
   }
-
-  return BPromise.resolve(cache).then(function(loadedCache) {
-    return callGetter(loadedCache, args);
-  });
 }
-
-function callGetter(cache, args) {
-  if (cache.options.getter) {
-    args.unshift(cache.data);
-    return cache.options.getter.apply(null, args);
-  } else {
-    return cache.data;
-  }
-}
-
 
 function Cache(options) {
   var cache = {};
@@ -94,16 +112,16 @@ function Cache(options) {
   load(cache);
   cache.intervalId = setInterval(function() { load(cache); }, options.ttl);
 
-  cache.get = function() {
-    var args = [].slice.call(arguments);
-    return getData(cache, args);
-  };
+  return {
+    get: function() {
+      var args = [].slice.call(arguments);
+      return getData(cache, args);
+    },
 
-  cache.reload = function(cb) {
-    return load(cache);
+    reload: function(cb) {
+      return load(cache, cb);
+    }
   };
-
-  return cache;
 }
 
 module.exports = Cache;

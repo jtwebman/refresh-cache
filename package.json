@@ -1,6 +1,6 @@
 {
   "name": "refresh-cache",
-  "version": "1.0.2",
+  "version": "2.0.0-beta",
   "description": "A simple Javascript cache that refreshes by calling the load function at a set refresh time.",
   "main": "cache.js",
   "scripts": {
@@ -26,12 +26,9 @@
   "devDependencies": {
     "coveralls": "^2.11.4",
     "istanbul": "^0.3.21",
+    "lodash": "^3.10.1",
     "mocha": "^2.3.3",
     "mocha-lcov-reporter": "^1.0.0",
     "must": "^0.13.1"
-  },
-  "dependencies": {
-    "bluebird": "^2.10.2",
-    "lodash": "^3.10.1"
   }
 }
